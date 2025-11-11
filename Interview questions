@@ -1,0 +1,82 @@
+JD ===================================================================
+
+Responsibilities
+• Proficient in implementation, management and troubleshoot AWS
+Technologies, ECS, EKS.
+• Proficient in Operating System such as AWS Linux, Red Hat Enterprise Linux.
+• Maintain, Manage and Monitor Cloud Infrastructure
+• Resolve IT infrastructure issues
+• Proactive handling of project and supporting project implementation
+• Create high-quality technical documentation
+• Support out of hours work if schedule requires
+• On-board new Cloud technologies, challenge existing implementation in a
+professional and constructive manner
+• Engage in Cloud security activities
+• Comply with ITSM/ITIL methodologies in day to day operations of IT
+Infrastructure
+Requirements:
+• Resourceful and self-driven individual with sense of urgency and
+commitment
+• Strong analytical and troubleshooting skills
+• Ability to work effectively in a fast paced implementation environment
+• Strong analytical and troubleshooting skills.
+• Ability to work effectively in a fast paced implementation environment
+• At least 3 year(s) of working experience in AWS Cloud or in the related field
+is required for this position
+• Knowledge of Cloud security tools like Checkpoint, Security Hub,
+GuardDuty, AWS Detective
+• Candidate must possess at least a Bachelor's Degree, Professional Degree,
+Engineering (Computer) or equivalent.
+• Must have Certified Kubernetes Administrator (CKA) certification
+Technical Skill
+• Operating Systems: Red Hat, AWS Linux
+• Build Tools/CI/Virtual/ : AWS DevOps, Jenkins
+• Containers Environment: Docker, Kubernetes, ECS, EKS
+• Cloud Technologies : Amazon Web Services
+• Automation/Scripting Languages : Terraform, Ansible, Shell Scripting, Python
+• Databases : MySQL
+• Others: Ansible *
+=====================================================================================
+
+
+
+
+1.Can you explain your experience with managing EKS clusters?
+
+2.How do you handle deployment rollbacks in Kubernetes?
+
+3.What’s your process for troubleshooting an AWS service outage?
+
+4.Have you ever automated infrastructure provisioning using Terraform?
+
+
+
+
+====================================EC2=============================================
+
+1.You have an EC2 instance running a critical web app. After restarting the instance, the app stops working because certain configurations and files are missing.?
+answer 
+
+
+User Data / Bootstrap Script:
+
+Yes — EC2 User Data can automate configuration setup each time the instance launches.
+
+To make it re-run on every reboot (not just the first), you’d modify /etc/cloud/cloud.cfg or use a startup script (like a systemd service).
+
+Custom AMI:
+
+Perfect. Creating an AMI after installing dependencies ensures that future instances launch fully pre-configured — no need for repeated setup.
+
+Bootstrap Automation:
+
+Excellent. Combining bootstrapping and AMIs makes deployments reproducible and scalable (common in autoscaling setups).
+
+🔧 Additional tip:
+
+For persistent data, use EBS volumes (not ephemeral storage).
+
+Mount them on startup and ensure data doesn’t vanish on termination.
+
+*****************************************************************************
+2.
