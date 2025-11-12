@@ -95,3 +95,6 @@ The key team=backend exists as an annotation on node1.
 However… 🧩 nodeAffinity only works with labels, not annotations.
 
 So actually — in this exact YAML, the pod will stay in a Pending state unless that team=backend is a label (not an annotation).
+===================================================================================================================
+
+3.
