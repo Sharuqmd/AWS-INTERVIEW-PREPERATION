@@ -1,0 +1,64 @@
+========================================JD===========================================
+Experience	Skills
+• Designed and implemented CI/CD pipelines for containerized applications using Jenkins, GitLab CI/CD, or CircleCI, enabling continuous delivery.
+
+• Worked closely with development teams to troubleshoot issues, optimize application performance, and ensure compatibility with Kubernetes environments.
+
+• Conducted regular audits and assessments to identify and remediate security vulnerabilities, ensuring compliance with industry standards.
+
+• Documented deployment procedures, configuration settings, and troubleshooting steps to facilitate knowledge sharing and collaboration among team members.
+
+• Managed and maintained Linux/Unix servers and virtualization platforms such as VMware or KVM.
+
+• Installed, configured, and maintained container runtimes such as Docker or containerd.
+
+• Automated infrastructure provisioning and configuration using tools like Ansible, Puppet, or Chef.
+
+• Implemented backup and disaster recovery solutions to ensure data integrity and minimize downtime.
+
+• Provided technical support and troubleshooting for server and network infrastructure issues.
+
+• Deployed, configured, and managed Kubernetes clusters on-premises or on cloud platforms such as AWS, Azure, or GCP.
+
+• Implemented best practices for cluster security, including role-based access control (RBAC), network policies, and encryption at rest and in transit.
+
+• Automated cluster provisioning and management tasks using tools like Terraform, Ansible, or Helm charts, reducing manual effort by 40%.
+
+• Monitored cluster health and performance metrics using Prometheus and Grafana, ensuring high availability and performance.	• Proficient in Kubernetes deployment, configuration, and administration.
+
+• Strong understanding of containerization technologies (Docker, containerd).
+
+• Experience with cloud computing platforms (AWS, Azure, GCP).
+
+• Knowledge of infrastructure as code (Terraform, Ansible).
+
+• Familiarity with CI/CD pipelines and automation tools (Jenkins, GitLab CI/CD).
+
+• Excellent troubleshooting and problem-solving skills.
+
+• Strong communication and collaboration abilities.
+
+************************************************************************************************************
+============================================================================================================
+
+
+1. You’re managing an on-premises Kubernetes cluster, and developers report that:
+
+“When we create new pods, they stay in Pending for several minutes, even though nodes are healthy and have enough resources.”
+
+You check the nodes — all Ready.
+You also check the pods — they’re waiting for scheduling.
+
+You suspect something is wrong with the control plane.
+
+👉 Question:
+What components of the control plane would you investigate, in what order, and what would you specifically look for in each component to identify the cause of the scheduling delay?
+
+Answer 
+
+If new pods remain Pending while nodes are healthy, I’d first check the scheduler — it’s responsible for assigning pods to nodes. I’d look at the scheduler logs for ‘FailedScheduling’ messages.
+
+If the scheduler looks fine, I’d check the controller-manager to see if pods are even being created correctly.
+
+Then I’d look at the API server logs and metrics to check for latency — slow etcd or API server overload can delay scheduling. Finally, 
+I’d verify etcd health using etcdctl endpoint health to ensure low latency and no timeouts. All these components are tightly coupled in scheduling flow.”
