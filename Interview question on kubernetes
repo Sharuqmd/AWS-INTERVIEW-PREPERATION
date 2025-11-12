@@ -62,3 +62,36 @@ If the scheduler looks fine, I’d check the controller-manager to see if pods a
 
 Then I’d look at the API server logs and metrics to check for latency — slow etcd or API server overload can delay scheduling. Finally, 
 I’d verify etcd health using etcdctl endpoint health to ensure low latency and no timeouts. All these components are tightly coupled in scheduling flow.”
+==================================================================================================================
+
+2. ⚙️ Question 15 (Node Metadata & Scheduling Logic)
+
+You have three nodes:
+
+node1 labeled as env=prod and annotated with team=backend
+
+node2 labeled as env=dev and annotated with team=frontend
+
+node3 labeled as env=stage and annotated with team=qa
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: team
+          operator: In
+          values:
+          - backend
+
+Where will this pod get scheduled — and why?
+
+Answer: 
+
+Yes — the pod will be scheduled on node1 because:
+
+The key team=backend exists as an annotation on node1.
+
+However… 🧩 nodeAffinity only works with labels, not annotations.
+
+So actually — in this exact YAML, the pod will stay in a Pending state unless that team=backend is a label (not an annotation).
