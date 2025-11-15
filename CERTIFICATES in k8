@@ -1,0 +1,78 @@
+                          ┌──────────────────┐
+                          │   Root CA (ca)   │
+                          │ ca.crt / ca.key  │
+                          └────────┬─────────┘
+                                   │ signs
+        ┌──────────────────────────┼──────────────────────────┐
+        │                          │                          │
+
+┌───────────────┐        ┌─────────────────┐        ┌────────────────────┐
+│ API Server    │        │ Kubelet Nodes   │        │ Front Proxy        │
+│ apiserver.crt │        │ kubelet.crt     │        │ front-proxy-ca.crt │
+└───────┬───────┘        └────────┬────────┘        └──────────┬─────────┘
+        │ talks to                │ kubelet ↔ API               │ aggregator API
+        │                         │                             │
+        ▼                         ▼                             ▼
+  ┌───────────────┐        ┌──────────────┐        ┌──────────────────┐
+  │ etcd CA       │        │ Kubelet CSR  │        │ Proxy Client     │
+  │ etcd/ca.crt   │        │ approvals    │        │ apiserver-proxy* │
+  └───────┬───────┘        └───────┬──────┘        └──────────┬─────────┘
+          │ signs                  │ auto-renew               │ signed by
+          │                        │                          │ front-proxy-ca
+          ▼                        ▼                          ▼
+
+  ┌─────────────────────────────── etcd cluster ───────────────────────────────┐
+  │                                                                            │
+  │        ┌──────────────┐     ┌──────────────┐      ┌──────────────┐        │
+  │        │ etcd server  │     │ etcd server  │      │ etcd server  │        │
+  │        │ server.crt   │◄───►│ peer.crt     │◄────►│ peer.crt     │        │
+  │        └──────────────┘     └──────────────┘      └──────────────┘        │
+  │                                                                            │
+  └────────────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   │
+                         API Server connects using
+                     apiserver-etcd-client.crt (from etcd CA)
+
+🔷 Explanation of the Map (Simple Terms)
+1. The Root CA
+
+Main cluster Certificate Authority.
+
+Signs certificates for API server, controller manager, scheduler, kubelet.
+
+2. API Server Certificates
+
+apiserver.crt: secure HTTPS endpoint
+
+apiserver-kubelet-client.crt: talks to kubelets
+
+apiserver-etcd-client.crt: talks to etcd
+
+API server is the heart — everything passes through it.
+
+3. Kubelet Certificates
+
+Each worker node has its own certificate signed by root CA.
+
+Workers request their cert via CSR → approved automatically.
+
+4. Front Proxy Certificates
+
+Used by aggregated APIs like metrics-server, dashboards, webhooks.
+
+5. etcd Certificates
+
+They have their own CA, separate from Kubernetes CA.
+
+etcd uses:
+
+server.crt
+
+peer.crt
+
+healthcheck-client.crt
+
+apiserver-etcd-client.crt (signed by etcd CA)
+
+All etcd nodes must mutually trust each other.
