@@ -1,0 +1,22 @@
+Question 1— Kubernetes Certificates & Certificate Rotation (kubeadm clusters)
+
+Scenario:
+Your on-prem cluster is built with kubeadm. After 1 year, your control-plane node shows certificate expiration warnings.
+kubectl get cs shows API server, controller-manager, and scheduler as “Unhealthy” because their client certs have expired.
+Your cluster is still running but you cannot add new nodes or perform secure communication.
+
+Explain:
+
+Which certificates expire in a kubeadm-managed cluster, and where they are located.
+
+How kubelet certificate rotation works vs control-plane certificate rotation.
+
+How to safely renew all Kubernetes certificates (API server, controller, scheduler, etc.) using kubeadm without breaking the cluster.
+
+How to handle ETCD certificates and what to check after renewal.
+
+How to avoid the same issue in the future (monitoring, automation, alerts).
+
+============
+Answer: - 
+============
