@@ -97,4 +97,82 @@ However… 🧩 nodeAffinity only works with labels, not annotations.
 So actually — in this exact YAML, the pod will stay in a Pending state unless that team=backend is a label (not an annotation).
 ===================================================================================================================
 
-3.
+3. 🔥 Question — ETCD Disaster Scenario (On-Prem Only)
+
+Your on-prem cluster suddenly loses two control-plane nodes because of a hardware crash.
+Only one control-plane node is alive.
+
+Symptoms:
+
+kubectl commands are failing or very slow
+
+etcd logs show "lost quorum"
+
+Cluster is technically running but cannot schedule or update anything
+
+❓ Questions:
+
+What does “etcd lost quorum” mean?
+
+Why does the cluster stop functioning even when one control-plane node is alive?
+
+How do you restore quorum?
+
+Using etcd snapshots
+
+Or manually removing failed members
+
+What commands do you run to recover etcd on the surviving node?
+
+
+Answer ✅ Full detailed answer (study / interview-grade)
+A. Concepts you must state first (short)
+
+etcd is the single source of truth for Kubernetes cluster state (pods, secrets, configmaps, node objects, etc.).
+
+Quorum (majority of members) is required for read/write consistency. For 3-member cluster, quorum = 2.
+
+Never run etcdctl snapshot restore on a running etcd node without stopping it — that can corrupt data.
+
+Always secure etcd communications (TLS certs), and use etcdctl v3 (ETCDCTL_API=3).
+
+B. How to take a consistent etcd snapshot (recommended production steps)
+
+Use etcdctl v3 and TLS. On a control-plane node:
+Etcd backup & restore — short actionable steps
+Save snapshot (on a healthy control-plane node):
+etcdctl --endpoints=$ENDPOINTS \
+  --cacert=$ETCD_CERT_DIR/ca.crt \
+  --cert=$ETCD_CERT_DIR/healthcheck-client.crt \
+  --key=$ETCD_CERT_DIR/healthcheck-client.key \
+  snapshot save /var/backups/etcd-snap-$(date -u +%Y%m%dT%H%M%SZ).db
+Copy snapshot + /etc/kubernetes/pki to off-node durable storage (S3, NFS, etc).
+
+B. Automate & validate snapshots
+
+Cron or systemd timer to run snapshot save and upload to object storage.
+
+Keep retention policy (daily x7, weekly x4).
+
+Validate after each snapshot: etcdctl snapshot status and run a periodic test restore in CI (restore to ephemeral VM, start etcd, run kubectl get pods --all-namespaces).
+
+Also backup kube-apiserver and kube-controller-manager certs and manifests (/etc/kubernetes).
+
+C. Restore an etcd snapshot to recover a failed control-plane node (embedded etcd)
+(Goal: restore the local data dir of the failed member; assume cluster still has quorum or you are rebuilding a single lost member)
+
+On the failed control-plane node (or new replacement node): stop control-plane static pods / kubelet:
+
+Copy snapshot and certs to the node.
+
+Restore snapshot into a new data-dir:
+
+ETCD_DATA_DIR=/var/lib/etcd
+etcdctl snapshot restore /path/to/snap.db \
+  --data-dir $ETCD_DATA_DIR \
+  --name <member-name> \
+  --initial-cluster "<m1>=https://IP1:2380,<m2>=https://IP2:2380,..." \
+  --initial-cluster-token <token> \
+  --initial-advertise-peer-urls https://<this-ip>:2380
+sudo systemctl start kubelet
+Verify the node is restored ..
