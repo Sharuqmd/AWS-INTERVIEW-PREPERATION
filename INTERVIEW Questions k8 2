@@ -187,6 +187,18 @@ Wrong namespace → namespaceSelector doesn’t match.
 
 Overlapping NetworkPolicies → remember that multiple policies are additive; traffic is allowed if any rule allows it.
 ************************************************************
+8. What happens to existing connections when a NetworkPolicy changes?
+When updating NetworkPolicies in production, expect that new connections may be blocked immediately.
+TCP connections that are already established may continue to work until they are closed.
+
+Some CNIs (like Calico) enforce NetworkPolicies at the packet level, so new rules may immediately block new connections, but existing TCP sessions may persist for a short while depending on connection tracking.
+
+UDP traffic is stateless, so rules take effect immediately for all packets.
+
+9. How can you simulate NetworkPolicy behavior before applying it?
+Kubernetes supports --dry-run=client or --dry-run=server to validate YAML syntax, but it does not simulate traffic:
+
+*******************************************************************
 Encryption at Rest
 
 Encryption in Transit
