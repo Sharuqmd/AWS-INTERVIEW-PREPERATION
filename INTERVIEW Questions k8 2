@@ -135,6 +135,56 @@ You can have multiple NetworkPolicies per namespace, and the rules are additive.
 5.How does egress policy differ from ingress policy?
 Once a NetworkPolicy selects a pod, all traffic not explicitly allowed is blocked.
 
+6. How would you allow traffic only from pods with a specific label AND namespace?
+To allow traffic only from pods with a specific label AND in a specific namespace, you use a NetworkPolicy combining podSelector and namespaceSelector in the from section. 
+Kubernetes evaluates both selectors together using a logical AND.
+example:-
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-specific-pods
+  namespace: default
+spec:
+  podSelector: {}           # Selects all pods in the current namespace
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: dev          # Only allow from namespace 'dev'
+          podSelector:
+            matchLabels:
+              role: frontend    # Only allow pods with label 'role=frontend'
+*******************************************************************
+7.How do you debug why a NetworkPolicy is blocking traffic?
+Answer :- 
+Key things to look at:
+
+podSelector → which pods are targeted
+
+ingress / egress rules → what traffic is allowed
+
+namespaceSelector → if traffic is restricted to certain namespaces
+
+Labels → verify that pod labels match the selectors
+
+Remember: only pods selected by a NetworkPolicy have their traffic restricted. Pods not selected are unaffected.
+
+kubectl run test-pod --rm -it --image=busybox -- /bin/sh
+# Inside pod
+wget --spider http://<target-pod-ip>:<port>
+nc -zv <target-pod-ip> <port>
+
+6️⃣ Common Pitfalls
+
+No egress rule for outgoing traffic → all egress is denied by default if a pod is selected by a policy.
+
+Labels mismatch → ingress or egress selectors don’t match actual pods/namespaces.
+
+Wrong namespace → namespaceSelector doesn’t match.
+
+Overlapping NetworkPolicies → remember that multiple policies are additive; traffic is allowed if any rule allows it.
 ************************************************************
 Encryption at Rest
 
