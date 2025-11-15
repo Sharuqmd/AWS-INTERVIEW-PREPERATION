@@ -17,6 +17,82 @@ How to handle ETCD certificates and what to check after renewal.
 
 How to avoid the same issue in the future (monitoring, automation, alerts).
 
-============
+===========
 Answer: - 
-============
+===========
+How to handle ETCD certificates and what to check after renewal.?
+If you’re running etcd as part of kubeadm control-plane nodes, the certs are here:
+ca.crt / ca.key	ETCD CA
+server.crt / server.key	ETCD server certificate
+peer.crt / peer.key	Used for communication between etcd peers
+healthcheck-client.crt	Used by kubelet health checks
+apiserver-etcd-client.crt	For kube-apiserver to talk to etcd
+
+
+kubeadm cert renew etcd-server
+kubeadm cert renew etcd-peer
+kubeadm cert renew etcd-healthcheck-client
+kubeadm cert renew apiserver-etcd-client
+
+systemctl restart kubelet
+
+
+export ETCDCTL_API=3
+
+etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/peer.crt \
+  --key=/etc/kubernetes/pki/etcd/peer.key \
+  endpoint health --cluster
+
+To check expire data for crt use kubeadm certs cert-expiration
+
+To check using open ssl use below commands 
+openssl x509 -in /etc/kubernetes/pki/etcd/server.crt -noout -dates
+openssl x509 -in /etc/kubernetes/pki/etcd/peer.crt -noout -dates
+openssl x509 -in /etc/kubernetes/pki/etcd/healthcheck-client.crt -noout -dates
+openssl x509 -in /etc/kubernetes/pki/apiserver-etcd-client.crt -noout -dates
+
+🟧 Procedure to Renew Control-Plane Certs
+
+Control-Plane Certificate Renewal (Manual)
+
+All control-plane certificates (API server, controller manager, scheduler, etcd, front-proxy) must be renewed manually.
+
+To check certificate expiration:
+kubeadm certs check-expiration
+
+To renew all control-plane certificates:
+kubeadm certs renew all
+
+To renew a specific certificate:
+kubeadm certs renew apiserver
+(or any other component name)
+
+After renewal, you must restart services so they pick up the new certificates:
+systemctl restart kubelet
+
+Static pods (API server, controller-manager, scheduler, etcd) will restart automatically because kubelet recreates the manifests.
+
+etcd Certificate Renewal (Manual)
+
+If etcd is external, you must manually generate new certificates and rotate them yourself.
+
+If etcd is managed by kubeadm, you can renew etcd certs using:
+kubeadm certs renew etcd-server
+kubeadm certs renew etcd-peer
+kubeadm certs renew etcd-healthcheck-client
+kubeadm certs renew apiserver-etcd-client
+
+Restart etcd afterwards using docker or container runtime commands.
+
+kubectl Client Cert Renewal
+
+If your kubeconfig uses client certificates, you must manually generate a new certificate and update the kubeconfig file.
+This is not common in newer cluster setups.
+
+Summary
+
+Kubelet certificates renew automatically.
+Control-plane certificates must be renewed manually using kubeadm.
+etcd certificates also must be renewed manually.
+After renewal, restart kubelet so static pods load updated certificates.
