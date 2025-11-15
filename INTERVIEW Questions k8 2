@@ -1,0 +1,154 @@
+🔥 Kubernetes Cluster Security
+
+Covering:
+=====================================================================================
+RBAC
+**************************************************************
+1. What is RBAC in Kubernetes and why is it needed?
+
+Without RBAC, any user or pod could:
+
+delete pods
+
+modify secrets
+
+shut down the cluster
+
+read sensitive logs
+
+exec into any container
+
+access your control-plane components
+
+RBAC prevents destruction and data leakage by tightly defining who can do what.
+
+Example : for admin access 
+verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+resources: ["*"]
+********************************************************
+2.What is the difference between Role and ClusterRole?
+
+✅ Role
+
+Namespace-scoped
+
+Can give permissions only inside one specific namespace
+
+Example: access to pods in the dev namespace
+
+✅ ClusterRole
+
+Cluster-scoped
+
+Can be used in 3 ways:
+
+Grant cluster-wide permissions
+
+Grant permissions on cluster-scoped resources (nodes, PVs…)
+
+Reuse the same role in any namespace
+
+A normal Role cannot touch cluster resources like:
+
+nodes
+
+namespaces
+
+persistent volumes
+
+certificates
+
+clusterroles
+**********************************************
+3. What is the difference between RoleBinding and ClusterRoleBinding?
+
+✅ RoleBinding
+
+Applies permissions inside ONE namespace
+
+Can bind:
+
+a Role (namespace-scoped)
+
+or a ClusterRole (reused as a namespace role)
+
+Only valid in the namespace where you create it.
+
+✅ ClusterRoleBinding
+
+Grants cluster-wide permissions
+
+Can bind only a ClusterRole
+
+Applies across all namespaces + cluster-scoped resources.
+**************************************************************************
+
+4. Can you restrict access to a specific resource in a specific namespace? How?
+
+Role: Grants permissions (verbs like get, list, create, delete) within a specific namespace.
+
+*********************************************************************
+5. What is a ServiceAccount and how does it relate to RBAC?
+
+Every pod in Kubernetes can run as a ServiceAccount.
+
+By default, pods use the default ServiceAccount in the namespace if none is specified.
+
+Each ServiceAccount has:
+
+Secrets: typically a token that the pod uses to authenticate with the Kubernetes API.
+
+Namespace scope: each ServiceAccount exists in a specific namespace.
+**********************************************************************
+6. How do you check what permissions a user/service account has?
+
+1️⃣ Using kubectl auth can-i
+kubectl auth can-i <verb> <resource> --as=<user> -n <namespace>
+***************************************************************************
+7. How do you give a user read access to pods in all namespaces except one?
+
+create a clusterrole so he can access all namespace and use role binding to deny permission (leave the verb and resources field blank rules [] ) 
+and bind this to that user so this particular namespace get left out 
+
+Use RoleBinding + ClusterRole if you want a ClusterRole but limited to one namespace.
+Use ClusterRoleBinding for cluster-wide access.
+************************************************************************
+8. How do you rotate the service account token of a running Pod? 
+
+====================================================================================
+
+Network Policies
+Questions :-
+
+1. What is a Kubernetes NetworkPolicy?
+
+A NetworkPolicy is like a firewall for pods, controlling ingress and egress traffic based on labels and namespaces. It is essential for securing pod-to-pod communication in a Kubernetes cluster.
+
+2. Do NetworkPolicies work without a CNI plugin?
+Without a NetworkPolicy, pods can communicate freely. Requires a CNI plugin that supports NetworkPolicies (e.g., Calico, Cilium).
+
+3.What is the default behavior when no NetworkPolicy is applied?
+
+4.How do you allow traffic only from a specific namespace?
+You can have multiple NetworkPolicies per namespace, and the rules are additive.
+
+5.How does egress policy differ from ingress policy?
+Once a NetworkPolicy selects a pod, all traffic not explicitly allowed is blocked.
+
+************************************************************
+Encryption at Rest
+
+Encryption in Transit
+
+Service Accounts
+
+Secrets
+
+Admission Controllers
+
+Pod Security
+
+Certificates
+
+API Server Security
+
