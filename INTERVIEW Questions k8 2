@@ -123,18 +123,19 @@ Questions :-
 1. What is a Kubernetes NetworkPolicy?
 
 A NetworkPolicy is like a firewall for pods, controlling ingress and egress traffic based on labels and namespaces. It is essential for securing pod-to-pod communication in a Kubernetes cluster.
-
+************************************************************************
 2. Do NetworkPolicies work without a CNI plugin?
-Without a NetworkPolicy, pods can communicate freely. Requires a CNI plugin that supports NetworkPolicies (e.g., Calico, Cilium).
-
+Requires a CNI plugin that supports NetworkPolicies (e.g., Calico, Cilium).
+************************************************************************
 3.What is the default behavior when no NetworkPolicy is applied?
-
+Without a NetworkPolicy, pods can communicate freely if the pod attached to any policy then the all the trafic is restructed by default 
+************************************************************************
 4.How do you allow traffic only from a specific namespace?
 You can have multiple NetworkPolicies per namespace, and the rules are additive.
-
+************************************************************************
 5.How does egress policy differ from ingress policy?
 Once a NetworkPolicy selects a pod, all traffic not explicitly allowed is blocked.
-
+************************************************************************
 6. How would you allow traffic only from pods with a specific label AND namespace?
 To allow traffic only from pods with a specific label AND in a specific namespace, you use a NetworkPolicy combining podSelector and namespaceSelector in the from section. 
 Kubernetes evaluates both selectors together using a logical AND.
