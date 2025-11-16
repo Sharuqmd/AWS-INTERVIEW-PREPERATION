@@ -1,0 +1,17 @@
+upgrade plan for control plane :
+
+✅ Summary / Best Practices
+
+Backup etcd first.
+
+Upgrade kubeadm → plan → apply.
+
+Upgrade kubelet and kubectl.
+
+Restart kubelet.
+
+Verify cluster health.
+
+Upgrade control-plane nodes one at a time in HA setup.
+
+Then upgrade worker nodes (drain → upgrade → uncordon).
