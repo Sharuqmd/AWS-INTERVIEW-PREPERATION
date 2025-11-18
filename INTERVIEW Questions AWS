@@ -79,4 +79,40 @@ For persistent data, use EBS volumes (not ephemeral storage).
 Mount them on startup and ensure data doesn’t vanish on termination.
 
 *****************************************************************************
-2.
+2. 2. EKS Networking and CNI Troubleshooting
+
+Question: A newly deployed Pod is constantly failing to communicate with another Pod in the same namespace. You suspect a networking issue.
+What steps do you take to troubleshoot the AWS VPC CNI (Container Network Interface) configuration?
+
+Answer: This usually points to a problem with IP Address Management or Security Groups.
+
+    Check Pod Status & Logs: Verify the Pod is in a Running state. If it's stuck in ContainerCreating, check CNI logs.
+
+    Check IP Allocation: Check the number of available IP addresses on the Node using the CNI's logging.
+
+        The AWS CNI manages IPs via Elastic Network Interfaces (ENIs) and secondary IP addresses. If the node runs out of secondary IPs, new Pods won't get an IP.
+
+    Inspect CNI Pod Status: Check the status and logs of the aws-node Pods (the CNI daemonset) in the kube-system namespace for errors related to network setup or communication with the AWS API.
+
+        kubectl logs -n kube-system -l k8s-app=aws-node
+
+    Network Policy Check: If the failure is between Pods, verify no NetworkPolicy is incorrectly blocking traffic.
+
+    VPC Security Group: Ensure the Node Security Group allows inbound and outbound traffic on the necessary ports (especially ephemeral ports) for communication within the cluster.
+*******************************************************************************************
+3. Managing State with Persistent Volumes
+
+Question: You need to deploy a stateful application (like a database) to EKS. Explain the components required to manage persistent storage and ensure data resilience using AWS services.
+
+Answer: You need StorageClasses, PersistentVolumeClaims (PVCs), and an AWS EBS CSI driver.
+
+    EBS CSI Driver: Ensure the AWS EBS Container Storage Interface (CSI) Driver is installed. This allows Kubernetes to communicate directly with AWS APIs to provision and manage EBS volumes.
+
+    StorageClass: Define a StorageClass YAML that specifies the AWS volume type (gp3 is standard), IOPS/throughput settings, and the provisioner (ebs.csi.aws.com).
+
+    PersistentVolumeClaim (PVC): The developer defines a PVC that requests a specific size and access mode (e.g., ReadWriteOnce) using the name of the StorageClass.
+
+    Dynamic Provisioning: When the stateful application (via a StatefulSet) requests the PVC, 
+    the EBS CSI driver dynamically provisions a new AWS EBS Volume according to the StorageClass definition and attaches it to the appropriate worker node.
+
+    Resilience: EBS volumes can be snapshotted using the Kubernetes VolumeSnapshot API, backing up the data to S3 for disaster recovery.
