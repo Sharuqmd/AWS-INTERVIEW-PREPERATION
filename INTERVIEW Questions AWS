@@ -116,3 +116,156 @@ Answer: You need StorageClasses, PersistentVolumeClaims (PVCs), and an AWS EBS C
     the EBS CSI driver dynamically provisions a new AWS EBS Volume according to the StorageClass definition and attaches it to the appropriate worker node.
 
     Resilience: EBS volumes can be snapshotted using the Kubernetes VolumeSnapshot API, backing up the data to S3 for disaster recovery.
+
+****************************************************************************************
+
+4.Explain how an Auto Scaling Group works with an ALB.
+The End-to-End Traffic Flow
+
+When a user accesses your application, this is what happens:
+
+    DNS Resolution: The user's request hits the ALB's DNS name.
+
+    Routing: The ALB Listener receives the request and, based on its rules (e.g., path or host matching), forwards the traffic to the Target Group.
+
+    Load Balancing: The Target Group uses a load-balancing algorithm (like round-robin) to distribute the request across all healthy EC2 instances currently managed by the ASG.
+
+    Scaling Trigger: If the volume of requests causes the instances' metrics (like CPU load) to cross the threshold defined in the scaling policy, the ASG begins the process of launching new instances to handle the load.
+
+
+5. Why would an EC2 instance fail to boot?
+
+Walk me through the difference between NACLs and Security Groups.
+
+How do you debug a failing Lambda function?
+
+What happens behind the scenes when you hit an ALB endpoint?
+
+============================================================================================================================================================================================================
+                                                                        10 Complex EKS Outage Scenarios & Resolutions
+============================================================================================================================================================================================================
+1. Scenario: VPC CNI IP Exhaustion
+
+Category	Detail
+Situation	A critical microservice in EKS (using the AWS VPC CNI) suddenly couldn't deploy new pods or scale. Existing pods were healthy, 
+but new pods remained in Pending status with Failed to assign IP.
+
+Scenario: VPC CNI IP Exhaustion
+
+Category	Detail
+Situation	A critical microservice in EKS (using the AWS VPC CNI) suddenly couldn't deploy new pods or scale. Existing pods were healthy, but new pods remained in Pending status with Failed to assign IP.
+Root Cause	VPC Subnet IP Address Exhaustion. A massive, unexpected surge in traffic triggered HPA to scale a stateless service rapidly, consuming all available IP addresses in the EKS node subnets.
+The VPC CNI couldn't allocate IPs to new ENIs/pods.
+Resolution	Immediate Fix: Horizontally scale the EKS node group into a new, larger subnet (in the same AZ/VPC) that was previously reserved for non-EKS resources. 
+Then, manually drain and terminate the old nodes in the exhausted subnet to force pods to reschedule onto the new nodes with fresh IP ranges. 
+
+Permanent Fix: Implement an IP Address Management (IPAM) solution and switch EKS to use Custom Networking (assigning IPs directly from a secondary CIDR block) or
+implement Prefix Delegation on the CNI to use larger /28 blocks per ENI.
+
+2. Scenario: Expired TLS Certificates for Internal Service Mesh
+
+Category	Detail
+Situation	Services communicating via an internal Istio (or App Mesh) service mesh began failing with TLS Handshake errors (503s). The applications were healthy, but inter-service communication was dead.
+Root Cause	The CA certificate or intermediate signing certificate used by the service mesh's sidecar injector (responsible for generating mTLS certificates for each pod) had expired.
+This is often overlooked if the CA's lifespan is set too short.
+Resolution	Immediate Fix: Temporarily disable the Istio sidecar injection for the most critical namespace (if safe) to allow services to communicate over plain HTTP, restoring basic functionality. 
+Simultaneously, manually rotate and update the expired certificate in the mesh's secrets store (e.g., in AWS Secrets Manager or Vault).
+Re-enable injection and trigger a rolling restart of all affected deployments to pick up the new, valid certificates.
+
+
+3. Scenario: Misconfigured Horizontal Pod Autoscaler (HPA) Stampede
+
+Category	Detail
+Situation	A central API service was suffering from constant, cyclical degradation. Applications were slow, and the EKS cluster was exhibiting massive, unnecessary scale-up/scale-down cycles (thundering herd/stampede).
+Root Cause	An HPA was configured to scale based on P99 latency (a custom metric) but had an aggressive scaleDownStabilizationWindow of 30 seconds. 
+A brief latency spike caused a massive scale-up, but the new pods weren't ready immediately.
+The HPA saw CPU/Latency drop and instantly scaled down, only for the load to overwhelm the remaining pods, restarting the cycle.
+Resolution	Immediate Fix: Temporarily suspend the HPA using kubectl patch hpa <name> -p '{"spec":{"minReplicas": <current_count>}}' to stabilize the pod count.
+Permanent Fix: Increase the scaleDownStabilizationWindow to 5-10 minutes to prevent premature scaling down and adjust the scale-up step size to be less aggressive. 
+Revert to a CPU-based scaling policy if the custom metric proved too noisy.
+
+4. Scenario: Kube-DNS/CoreDNS Dependency Failure
+
+Category	Detail
+Situation	Applications couldn't resolve external or internal hostnames. Services were failing with timeouts and "Unknown Host" errors, but the cluster was otherwise stable. 
+kubectl get pods -n kube-system showed the CoreDNS pods restarting frequently or being stuck in CrashLoopBackOff.
+Root Cause	A new node group/AMI deployment had failed to include the necessary kubelet configuration for cluster-dns or, more commonly, 
+a CoreDNS ConfigMap was accidentally overwritten to point to an invalid upstream DNS server (e.g., a non-existent internal DNS server).
+Resolution	Immediate Fix: Revert the CoreDNS ConfigMap to a known good state (using the EKS default upstream DNS, often the VPC DNS or 8.8.8.8). Restart the CoreDNS pods to pick up the new config. 
+Permanent Fix: Implement ConfigMap immutability for critical system components (if supported) and 
+use an EKS Blue/Green deployment strategy for AMIs to ensure all critical system components (like kubelet and networking) are correctly provisioned before draining old nodes.
+
+
+5. Scenario: IAM Role Throttling Due to High Pod Density
+
+Category	Detail
+Situation	Multiple applications using IRSA (IAM Roles for Service Accounts) started failing simultaneously with "Access Denied" or "Throttling" errors when attempting to call AWS APIs (like S3, DynamoDB).
+Root Cause	IAM Role Throttling on the STS AssumeRole API. The cluster had a very high pod density (many applications and short-lived jobs) all configured to use IRSA. 
+The high volume of STS AssumeRole calls from all the pods requesting temporary credentials exceeded the global IAM STS throttling limits for the account/region.
+Resolution	Immediate Fix: Identify and temporarily disable the most transient or resource-intensive job (e.g., a massive ETL job) to reduce the AssumeRole request rate. 
+Permanent Fix: Consolidate multiple microservices that share similar access patterns onto fewer, 
+more generalized IRSA roles to reduce the overall count of AssumeRole calls. Where possible, use AWS SDK client-side caching for IAM credentials to minimize repeated STS calls.
+
+
+
+6. Scenario: Custom Webhook Admission Controller Failure
+
+Category	Detail
+Situation	No new deployments or configuration changes could be made to the cluster. All kubectl apply or kubectl create commands for pods/deployments resulted in a timeout 
+or "connection refused" error from the API server, but the API server itself was healthy.
+Root Cause	A Validating or Mutating Webhook Admission Controller (e.g., for security policy enforcement like Gatekeeper or a custom sidecar injector) was unreachable or had crashed. 
+The Kubernetes API server waited for the webhook response before accepting any resource, causing a deadlock for all resource creation/modification.
+Resolution	Immediate Fix: Use a separate, pre-configured break-glass Kubeconfig to directly delete the faulty ValidatingWebhookConfiguration or MutatingWebhookConfiguration resource using kubectl delete.
+This bypasses the controller and restores API functionality. 
+Permanent Fix: Implement failure policy for all webhooks as Fail (default) only for absolutely critical components. Use Ignore for non-critical webhooks, and ensure the webhook's deployment has a Pod Disruption Budget (PDB) 
+and is spread across multiple availability zones.
+
+
+
+7. Scenario: StorageClass Provisioner Outage
+
+Category	Detail
+Situation	New deployments requiring PersistentVolumeClaims (PVCs) were stuck, with the PVCs remaining in the Pending status. Existing applications were fine, but any scale-out or new feature deployment was blocked.
+Root Cause	The AWS EBS CSI Driver (or other dynamic provisioner) deployment had failed during an upgrade.
+The pod responsible for the provisioner component was unhealthy or its IAM permissions for creating EBS volumes were revoked/incorrectly modified.
+Resolution	Immediate Fix: Review the CSI driver logs. Identify the missing permission and re-attach the correct IAM Policy to the CSI driver's Service Account (IRSA). 
+Once permissions were restored, the pending PVCs automatically bound within seconds as the provisioner caught up.
+Permanent Fix: Automate IAM Policy drift detection and enforcement, especially for core cluster components. Use Managed Add-ons where possible for critical components like the EBS CSI driver,
+as AWS handles the lifecycle and default permissions.
+
+
+8. Scenario: Service Mesh Resource Limit Overload
+
+Category	Detail
+Situation	Intermittent high-latency and connection reset errors across all services, but the application pods showed low CPU/Memory usage. 
+The control plane logs were flooded with warnings about configuration propagation delays.
+Root Cause	Service Mesh Control Plane Resource Exhaustion (e.g., Istiod). The number of services/endpoints in the cluster (service mesh) had grown so large that the mesh control plane components
+(e.g., istiod) had exhausted their memory limits while trying to generate and push configurations to the sidecars.
+Resolution	Immediate Fix: Increase the memory and CPU requests/limits for the main control plane deployment (e.g., istiod) to give it necessary headroom. Simultaneously,
+scale down non-critical services that were contributing to the configuration load. Permanent Fix: Implement service mesh scoping
+(e.g., using Istio's Exported ServiceSets or Sidecar Resources) to logically partition the cluster and reduce the amount of configuration each control plane instance must manage and push.
+
+
+9. Scenario: Security Policy Pod Resource Denial
+
+Category	Detail
+Situation	A new, critical batch processing deployment failed to start, with pods stuck in Pending. The events log showed "Warning FailedScheduling" but the reason was not resource-related (CPU/Memory).
+The error was cryptic: 0/10 nodes are available: pod security policy 'psp-deny-root-users' denied the request.
+Root Cause	Overspecified or Defaulted Pod Security Policy (PSP) Denying Capabilities. The batch job's container image, which required CAP_NET_ADMIN or ran as root, 
+was implicitly denied by a mandatory, default PSP that was meant to enforce strong security by preventing root access or privileged capabilities.
+Resolution	Immediate Fix: Temporarily apply a more permissive, dedicated PSP to the batch job's namespace that allowed the required capabilities only for that job's Service Account. 
+Permanent Fix: The team either rebuilt the container image to run as a non-root user (best practice) or created a dedicated, 
+least-privilege PSP that granted the minimal necessary capabilities (NET_ADMIN if required) and bound it only to the specific Service Accounts that needed it.
+
+
+
+10. Scenario: Uncontrolled Cluster Autoscaler Scale-Down
+
+Category	Detail
+Situation	After a brief traffic spike, the cluster was healthy, but performance was poor.
+Upon investigation, many critical, non-replicated infrastructure pods (Monitoring Agents, Logging DaemonSets, DNS) had been evicted or were stuck in Pending.
+Root Cause	Cluster Autoscaler (CA) Misconfiguration Evicting Critical Pods. The CA aggressively scaled down nodes after the spike. 
+It miscalculated which pods could be safely moved and evicted essential infrastructure pods that lacked proper Pod Disruption Budgets (PDBs) or affinity rules to prevent them from being placed on the same node.
+Resolution	Immediate Fix: Manually scale the EKS node group back up to the pre-outage count to provide scheduling room for the evicted pods. 
+Permanent Fix: Implement PDBs with minAvailable: 1 or maxUnavailable: 0 for all critical infrastructure deployments (CoreDNS, Monitoring, CSI drivers). 
+For DaemonSets, implement terminationGracePeriodSeconds and CA annotations ("cluster-autoscaler.kubernetes.io/safe-to-evict": "false") to prevent the CA from evicting them.
